@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Messaging;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
@@ -14,7 +13,6 @@ namespace AukanGym
     public class AdapterWeb
     {
         private const string Url = "http://localhost:5000/api/payments/today";
-        private const string Cola = @".\private$\dig_web_pagos";
 
         // Un pago tal como lo entrega la API del sitio web
         [DataContract]
@@ -44,7 +42,7 @@ namespace AukanGym
 
             foreach (var pago in pagos)
             {
-                Enviar(AJson(pago));
+                Colas.Enviar(Colas.WebPagos, AJson(pago), "pago-web");
             }
             Console.WriteLine("Pagos web enviados: " + pagos.Count);
         }
@@ -59,30 +57,5 @@ namespace AukanGym
             }
         }
 
-        private void Enviar(string jsonPago)
-        {
-            using (var tx = new MessageQueueTransaction())
-            {
-                try
-                {
-                    tx.Begin();
-                    using (var cola = new MessageQueue(Cola))
-                    {
-                        var mensaje = new Message(jsonPago, new XmlMessageFormatter(new[] { typeof(string) }))
-                        {
-                            Label = "pago-web",
-                            Recoverable = true
-                        };
-                        cola.Send(mensaje, tx);
-                    }
-                    tx.Commit();
-                }
-                catch (Exception e)
-                {
-                    tx.Abort();
-                    Console.Error.WriteLine("No se pudo enviar el pago web: " + e.Message);
-                }
-            }
-        }
     }
 }

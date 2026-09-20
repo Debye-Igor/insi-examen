@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Messaging;
 using System.Xml.Linq;
 
 namespace AukanGym
@@ -10,7 +9,6 @@ namespace AukanGym
     public class AdapterXml
     {
         private const string Carpeta = @"C:\AukanGym\PagosXML";
-        private const string Cola = @".\private$\dig_suc_pagos";
 
         public void Ejecutar(string fecha)
         {
@@ -32,7 +30,7 @@ namespace AukanGym
                     pago.SetAttributeValue("sucursal", sucursal);
                     pago.SetAttributeValue("fecha", fechaPagos);
 
-                    Enviar(pago.ToString());
+                    Colas.Enviar(Colas.SucPagos, pago.ToString(), "pago-sucursal");
                     enviados++;
                 }
 
@@ -40,30 +38,5 @@ namespace AukanGym
             }
         }
 
-        private void Enviar(string xmlPago)
-        {
-            using (var tx = new MessageQueueTransaction())
-            {
-                try
-                {
-                    tx.Begin();
-                    using (var cola = new MessageQueue(Cola))
-                    {
-                        var mensaje = new Message(xmlPago, new XmlMessageFormatter(new[] { typeof(string) }))
-                        {
-                            Label = "pago-sucursal",
-                            Recoverable = true
-                        };
-                        cola.Send(mensaje, tx);
-                    }
-                    tx.Commit();
-                }
-                catch (Exception e)
-                {
-                    tx.Abort();
-                    Console.Error.WriteLine("No se pudo enviar el pago: " + e.Message);
-                }
-            }
-        }
     }
 }
